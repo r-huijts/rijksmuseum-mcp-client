@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+const { ipcRenderer } = window.require('electron');
 
 interface Artwork {
     id: string;
@@ -12,7 +12,13 @@ interface Artwork {
     dimensions?: string[];
 }
 
-class ArtworkRenderer {
+interface ChatMessage {
+  type: 'user' | 'assistant';
+  content: string;
+}
+
+// Export the classes so they can be used as modules
+export class ArtworkRenderer {
     private container: HTMLElement;
     private searchInput: HTMLInputElement;
     private searchButton: HTMLButtonElement;
@@ -125,14 +131,74 @@ class ArtworkRenderer {
     }
 }
 
-// Initialize renderer
-new ArtworkRenderer();
+export class ChatUI {
+  constructor() {
+    console.log('ChatUI initializing');
+    this.initializeChat();
+  }
 
-// Global functions for button click handlers
-(window as any).requestArtworkDetails = (objectNumber: string) => {
-    ipcRenderer.send('get-artwork-details', objectNumber);
+  private initializeChat() {
+    const sendButton = document.getElementById('sendMessage');
+    const messageInput = document.getElementById('messageInput') as HTMLTextAreaElement;
+    const chatContainer = document.getElementById('chatContainer');
+
+    if (!sendButton || !messageInput || !chatContainer) {
+      console.error('Chat elements not found:', {
+        sendButton: !!sendButton,
+        messageInput: !!messageInput,
+        chatContainer: !!chatContainer
+      });
+      return;
+    }
+
+    console.log('Chat elements found, setting up listeners');
+
+    // Simple click handler
+    sendButton.onclick = () => {
+      const message = messageInput.value.trim();
+      if (message) {
+        console.log('Sending message:', message);
+        this.displayMessage('user', message);
+        ipcRenderer.send('chat-message', message);
+        messageInput.value = '';
+      }
+    };
+
+    // Response handler
+    ipcRenderer.on('chat-response', (_, data) => {
+      console.log('Received response:', data);
+      this.displayMessage('assistant', data.content);
+    });
+  }
+
+  private displayMessage(type: 'user' | 'assistant', content: string) {
+    const chatContainer = document.getElementById('chatContainer');
+    if (!chatContainer) return;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}-message`;
+    messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+}
+
+// Initialize both UIs when the document is ready
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('Window loaded');
+  new ArtworkRenderer();
+  new ChatUI();
+});
+
+// Export the global functions
+export const requestArtworkDetails = (objectNumber: string) => {
+  ipcRenderer.send('get-artwork-details', objectNumber);
 };
 
-(window as any).openImageInBrowser = (imageUrl: string) => {
-    ipcRenderer.send('open-image-in-browser', imageUrl);
-}; 
+export const openImageInBrowser = (imageUrl: string) => {
+  ipcRenderer.send('open-image-in-browser', imageUrl);
+};
+
+// Make functions available globally
+(window as any).requestArtworkDetails = requestArtworkDetails;
+(window as any).openImageInBrowser = openImageInBrowser; 

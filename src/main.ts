@@ -5,6 +5,9 @@ import isDev from 'electron-is-dev';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
+import * as dotenv from 'dotenv';
+import { LLMService } from './services/llm.js';
+dotenv.config();
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +37,7 @@ const ArtworkDetailsSchema = ArtworkSchema.extend({
 // MCP Client Implementation
 class MCPClient {
   private client: Client;
+  private llm: LLMService;
   
   constructor() {
     this.client = new Client({
@@ -45,14 +49,26 @@ class MCPClient {
       }
     });
 
+    this.llm = new LLMService();
     this.initializeClient();
   }
 
   private async initializeClient() {
     try {
+      if (!process.env.RIJKSMUSEUM_API_KEY) {
+        throw new Error('RIJKSMUSEUM_API_KEY environment variable is not set');
+      }
+
+      if (!process.env.MCP_SERVER_PATH) {
+        throw new Error('MCP_SERVER_PATH environment variable is not set');
+      }
+
       const transport = new StdioClientTransport({
-        command: "rijksmuseum-mcp-server",
-        args: []
+        command: process.execPath,
+        args: [process.env.MCP_SERVER_PATH],
+        env: {
+          RIJKSMUSEUM_API_KEY: process.env.RIJKSMUSEUM_API_KEY
+        }
       });
       
       await this.client.connect(transport);
@@ -113,6 +129,52 @@ class MCPClient {
       console.error('Failed to open image in browser:', error);
     }
   }
+
+  public async processMessage(message: string) {
+    try {
+      console.log('Processing message:', message); // Debug log
+      
+      // Get context from MCP server if needed
+      const context = await this.getRelevantContext(message);
+      console.log('Got context:', context); // Debug log
+      
+      // Process with Claude
+      const response = await this.llm.chat(message, context);
+      console.log('Got Claude response:', response); // Debug log
+      
+      mainWindow?.webContents.send('chat-response', {
+        type: 'assistant',
+        content: response
+      });
+    } catch (error) {
+      console.error('Failed to process message:', error);
+      mainWindow?.webContents.send('chat-error', {
+        error: 'Failed to process message'
+      });
+    }
+  }
+
+  private async getRelevantContext(message: string) {
+    // This method would interact with your MCP server to get relevant context
+    // based on the user's message
+    try {
+      const response = await this.client.request(
+        {
+          method: "get_context",
+          params: { message }
+        },
+        z.object({ context: z.string() })
+      );
+      return response.context;
+    } catch (error) {
+      console.error('Failed to get context:', error);
+      return undefined;
+    }
+  }
+
+  public clearChatHistory() {
+    this.llm.clearHistory();
+  }
 }
 
 // Create window and set up app lifecycle
@@ -122,7 +184,9 @@ function createWindow() {
     height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      webSecurity: false, // Only for development
+      allowRunningInsecureContent: true // Only for development
     }
   });
 
@@ -165,4 +229,22 @@ ipcMain.on('get-artwork-details', (event, objectNumber: string) => {
 
 ipcMain.on('open-image-in-browser', (event, imageUrl: string) => {
   mcpClient.openImageInBrowser(imageUrl);
+});
+
+ipcMain.on('chat-message', async (event, message: string) => {
+  console.log('Main process received message:', message);
+  
+  try {
+    await mcpClient.processMessage(message);
+  } catch (error) {
+    console.error('Error processing message:', error);
+    event.reply('chat-response', {
+      type: 'assistant',
+      content: 'Sorry, I encountered an error processing your message.'
+    });
+  }
+});
+
+ipcMain.on('clear-chat', () => {
+  mcpClient.clearChatHistory();
 }); 

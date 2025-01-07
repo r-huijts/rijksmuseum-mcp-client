@@ -37,7 +37,9 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.33.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^16.4.1",
     "electron-is-dev": "^2.0.0",
     "zod": "^3.22.4"
   }
