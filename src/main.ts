@@ -6,7 +6,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
 import * as dotenv from 'dotenv';
-import { LLMService } from './services/llm.js';
+import { createLLMService } from './services/llm/factory.js';
+import type { LLMService } from './services/llm/types.js';
 dotenv.config();
 
 // Get __dirname equivalent in ES modules
@@ -49,7 +50,13 @@ class MCPClient {
       }
     });
 
-    this.llm = new LLMService();
+    // Initialize LLM service based on environment variables
+    const provider = process.env.LLM_PROVIDER as 'ollama' | 'claude' || 'ollama';
+    this.llm = createLLMService(provider, {
+      model: process.env.OLLAMA_MODEL || 'mistral',
+      apiKey: process.env.CLAUDE_API_KEY
+    });
+
     this.initializeClient();
   }
 
@@ -132,20 +139,35 @@ class MCPClient {
 
   public async processMessage(message: string) {
     try {
-      console.log('Processing message:', message); // Debug log
+      console.log('Processing message:', message);
       
-      // Get context from MCP server if needed
       const context = await this.getRelevantContext(message);
-      console.log('Got context:', context); // Debug log
+      console.log('Got context:', context);
       
-      // Process with Claude
-      const response = await this.llm.chat(message, context);
-      console.log('Got Claude response:', response); // Debug log
-      
-      mainWindow?.webContents.send('chat-response', {
-        type: 'assistant',
-        content: response
-      });
+      // Use streaming
+      await this.llm.streamChat(
+        message,
+        {
+          onToken: (token) => {
+            mainWindow?.webContents.send('chat-token', {
+              type: 'assistant',
+              content: token
+            });
+          },
+          onComplete: (fullResponse) => {
+            mainWindow?.webContents.send('chat-complete', {
+              type: 'assistant',
+              content: fullResponse
+            });
+          },
+          onError: (error) => {
+            mainWindow?.webContents.send('chat-error', {
+              error: error.message
+            });
+          }
+        },
+        context
+      );
     } catch (error) {
       console.error('Failed to process message:', error);
       mainWindow?.webContents.send('chat-error', {

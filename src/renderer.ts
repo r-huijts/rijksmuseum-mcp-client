@@ -132,6 +132,9 @@ export class ArtworkRenderer {
 }
 
 export class ChatUI {
+  private currentMessageDiv: HTMLDivElement | null = null;
+  private typingIndicator: HTMLDivElement | null = null;
+
   constructor() {
     console.log('ChatUI initializing');
     this.initializeChat();
@@ -159,16 +162,69 @@ export class ChatUI {
       if (message) {
         console.log('Sending message:', message);
         this.displayMessage('user', message);
+        this.showTypingIndicator();
         ipcRenderer.send('chat-message', message);
         messageInput.value = '';
       }
     };
 
-    // Response handler
-    ipcRenderer.on('chat-response', (_, data) => {
-      console.log('Received response:', data);
-      this.displayMessage('assistant', data.content);
+    // Add Enter key handler
+    messageInput.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendButton.click();
+      }
     });
+
+    // Handle streaming responses
+    ipcRenderer.on('chat-token', (_, data) => {
+      console.log('Received token:', data);
+      this.hideTypingIndicator();
+      if (!this.currentMessageDiv) {
+        // Create new assistant message bubble for the first token
+        this.displayMessage('assistant', '');
+      }
+      this.appendToMessage(data.content);
+    });
+
+    ipcRenderer.on('chat-complete', (_, data) => {
+      console.log('Chat complete:', data);
+      this.hideTypingIndicator();
+      this.currentMessageDiv = null;
+    });
+
+    ipcRenderer.on('chat-error', (_, data) => {
+      console.error('Chat error:', data);
+      this.hideTypingIndicator();
+      this.displayMessage('assistant', `Error: ${data.error}`);
+    });
+  }
+
+  private showTypingIndicator() {
+    const chatContainer = document.getElementById('chatContainer');
+    if (!chatContainer) return;
+
+    // Remove existing typing indicator if any
+    this.hideTypingIndicator();
+
+    // Create new typing indicator
+    this.typingIndicator = document.createElement('div');
+    this.typingIndicator.className = 'typing-indicator';
+    this.typingIndicator.innerHTML = `
+      <span></span>
+      <span></span>
+      <span></span>
+    `;
+    
+    chatContainer.appendChild(this.typingIndicator);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  private hideTypingIndicator() {
+    if (this.typingIndicator) {
+      this.typingIndicator.remove();
+      this.typingIndicator = null;
+    }
   }
 
   private displayMessage(type: 'user' | 'assistant', content: string) {
@@ -180,6 +236,20 @@ export class ChatUI {
     messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
     chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    if (type === 'assistant') {
+      this.currentMessageDiv = messageDiv;
+    }
+  }
+
+  private appendToMessage(token: string) {
+    if (!this.currentMessageDiv) return;
+
+    const content = this.currentMessageDiv.querySelector('.message-content');
+    if (content) {
+      content.textContent += token;
+      this.currentMessageDiv.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 }
 
