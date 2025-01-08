@@ -1,6 +1,6 @@
-# Electron MCP Client for Rijksmuseum API
+# Rijksmuseum MCP Client for Rijksmuseum MCP Server
 
-An Electron-based desktop application that integrates with the Rijksmuseum API using the Model Context Protocol (MCP). This client enables AI-powered interactions with the Rijksmuseum's art collection through a chat interface.
+An Electron-based desktop application that integrates with the Rijksmuseum MCP server using the Model Context Protocol (MCP). This client enables AI-powered interactions with the Rijksmuseum's art collection through a chat interface.
 
 ## Features
 
