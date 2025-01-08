@@ -16,6 +16,21 @@ An Electron-based desktop application that integrates with the Rijksmuseum API u
 - Node.js v18 or higher
 - npm or yarn
 - Git
+- [Rijksmuseum MCP Server](https://github.com/r-huijts/rijksmuseum-mcp) - Required for API integration
+
+## Dependencies
+
+This client is designed to work with the [Rijksmuseum MCP Server](https://github.com/r-huijts/rijksmuseum-mcp.git). You'll need to:
+
+1. Clone and set up the Rijksmuseum MCP Server:
+```bash
+git clone https://github.com/r-huijts/rijksmuseum-mcp.git
+cd rijksmuseum-mcp
+npm install
+npm run build
+```
+
+2. Configure the server path in your `.env` file (see Environment Variables section)
 
 ## Installation
 
@@ -33,7 +48,7 @@ npm install
 3. Create a `.env` file in the root directory with your API keys:
 ```
 RIJKSMUSEUM_API_KEY=your-rijksmuseum-api-key
-MCP_SERVER_PATH=/path/to/your/mcp-server
+MCP_SERVER_PATH=/path/to/rijksmuseum-mcp/build/index.js
 ```
 
 ## Development
@@ -63,7 +78,7 @@ electron-mcp-client/
 ## Environment Variables
 
 - `RIJKSMUSEUM_API_KEY`: Your Rijksmuseum API key
-- `MCP_SERVER_PATH`: Path to the MCP server executable
+- `MCP_SERVER_PATH`: Path to the Rijksmuseum MCP server executable
 
 ## Contributing
 
@@ -81,4 +96,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Rijksmuseum API](https://data.rijksmuseum.nl/object-metadata/api/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Electron](https://www.electronjs.org/) 
+- [Electron](https://www.electronjs.org/)
+- [Rijksmuseum MCP Server](https://github.com/r-huijts/rijksmuseum-mcp)
