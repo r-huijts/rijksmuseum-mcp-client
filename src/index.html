@@ -104,6 +104,47 @@
         .message-image:hover {
             transform: scale(1.02);
         }
+
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            margin: 5px 0;
+            margin-right: auto;
+            margin-left: 10px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            background-color: #666;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite;
+            opacity: 0.3;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -119,34 +160,57 @@
     <script>
         const { ipcRenderer } = require('electron');
         let currentMessage = '';
+        let loadingIndicator = null;
+
+        function showLoadingIndicator() {
+            const chatContainer = document.getElementById('chat-container');
+            if (loadingIndicator) return;
+
+            loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.innerHTML = `
+                Fetching data from Rijksmuseum
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `;
+            chatContainer.appendChild(loadingIndicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideLoadingIndicator() {
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+                loadingIndicator = null;
+            }
+        }
 
         function appendMessage(content, type) {
+            hideLoadingIndicator();
             const chatContainer = document.getElementById('chat-container');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}-message`;
             
             // Convert URLs to clickable links and display images
             const formattedContent = content
-                .split('\n\n')  // Split into paragraphs
+                .split('\n\n')
                 .map(paragraph => {
-                    // Remove [Image URL]: prefix and @ symbol from URLs
                     paragraph = paragraph
                         .replace(/(?:\[Image URL\]:|Image URL:)\s*/g, '')
                         .replace(/@(https?:\/\/)/, '$1');
                     
-                    // Replace image URLs with img elements (including Rijksmuseum's Google-hosted images)
                     paragraph = paragraph.replace(
                         /https?:\/\/lh[0-9]\.googleusercontent\.com\/[a-zA-Z0-9_\-=]+/g,
                         '<img src="$&" alt="Artwork" class="message-image" />'
                     );
                     
-                    // Make other URLs clickable (excluding already processed image tags)
                     paragraph = paragraph.replace(
                         /(?<!<img[^>]*)(https?:\/\/[^\s]+)(?![^<]*>|[^<>]*<\/)/gi,
                         '<a href="$1" target="_blank">$1</a>'
                     );
                     
-                    // Replace newlines with <br>
                     return paragraph.replace(/\n/g, '<br>');
                 })
                 .join('<br><br>');
@@ -162,6 +226,7 @@
             
             if (message) {
                 appendMessage(message, 'user');
+                showLoadingIndicator();
                 ipcRenderer.send('chat-message', message);
                 input.value = '';
                 currentMessage = '';
@@ -183,6 +248,7 @@
 
         // Handle streaming responses
         ipcRenderer.on('chat-token', (event, data) => {
+            hideLoadingIndicator();
             const chatContainer = document.getElementById('chat-container');
             let messageDiv = chatContainer.lastElementChild;
             
@@ -194,28 +260,23 @@
             
             currentMessage += data.content;
             
-            // Convert URLs to clickable links and display images
             const formattedContent = currentMessage
-                .split('\n\n')  // Split into paragraphs
+                .split('\n\n')
                 .map(paragraph => {
-                    // Remove [Image URL]: prefix and @ symbol from URLs
                     paragraph = paragraph
                         .replace(/(?:\[Image URL\]:|Image URL:)\s*/g, '')
                         .replace(/@(https?:\/\/)/, '$1');
                     
-                    // Replace image URLs with img elements (including Rijksmuseum's Google-hosted images)
                     paragraph = paragraph.replace(
                         /https?:\/\/lh[0-9]\.googleusercontent\.com\/[a-zA-Z0-9_\-=]+/g,
                         '<img src="$&" alt="Artwork" class="message-image" />'
                     );
                     
-                    // Make other URLs clickable (excluding already processed image tags)
                     paragraph = paragraph.replace(
                         /(?<!<img[^>]*)(https?:\/\/[^\s]+)(?![^<]*>|[^<>]*<\/)/gi,
                         '<a href="$1" target="_blank">$1</a>'
                     );
                     
-                    // Replace newlines with <br>
                     return paragraph.replace(/\n/g, '<br>');
                 })
                 .join('<br><br>');
@@ -225,15 +286,18 @@
         });
 
         ipcRenderer.on('chat-complete', (event, data) => {
+            hideLoadingIndicator();
             currentMessage = '';
         });
 
         ipcRenderer.on('chat-error', (event, data) => {
+            hideLoadingIndicator();
             appendMessage(`Error: ${data.error}`, 'assistant');
         });
 
         // Handle MCP messages
         ipcRenderer.on('mcp-message', (event, data) => {
+            hideLoadingIndicator();
             switch (data.type) {
                 case 'artworks_list':
                     const artworksList = data.artworks.map(artwork => 
