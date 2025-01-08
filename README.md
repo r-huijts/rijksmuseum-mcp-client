@@ -1,51 +1,84 @@
-# Rijksmuseum MCP Client
+# Electron MCP Client for Rijksmuseum API
 
-An Electron-based client application that connects to the Rijksmuseum MCP server to explore the museum's art collection.
+An Electron-based desktop application that integrates with the Rijksmuseum API using the Model Context Protocol (MCP). This client enables AI-powered interactions with the Rijksmuseum's art collection through a chat interface.
 
 ## Features
 
-- Search artworks in the Rijksmuseum collection
-- View detailed artwork information
-- Open high-resolution images in browser
-- Modern, responsive user interface
+- 🎨 Search and explore Rijksmuseum's art collection
+- 💬 Chat interface with AI-powered responses
+- 🖼️ Image display support for artworks
+- 🔄 Real-time API integration
+- 🛠️ Built with Electron and TypeScript
+- 🤖 Model Context Protocol (MCP) integration
 
 ## Prerequisites
 
 - Node.js v18 or higher
-- npm v8 or higher
-- A Rijksmuseum API key
+- npm or yarn
+- Git
 
 ## Installation
 
 1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd electron-mcp-client
-   ```
+```bash
+git clone [repository-url]
+cd electron-mcp-client
+```
 
 2. Install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-   Then edit `.env` and add your Rijksmuseum API key.
-
-4. Build and start the application:
-   ```bash
-   npm run build
-   npm start
-   ```
+3. Create a `.env` file in the root directory with your API keys:
+```
+RIJKSMUSEUM_API_KEY=your-rijksmuseum-api-key
+MCP_SERVER_PATH=/path/to/your/mcp-server
+```
 
 ## Development
 
-- `npm run dev` - Start the application in development mode with hot reload
-- `npm run build` - Build the application
-- `npm run dist` - Create distributable packages
+Start the development server:
+```bash
+npm run dev
+```
+
+Build the application:
+```bash
+npm run build
+```
+
+## Project Structure
+
+```
+electron-mcp-client/
+├── src/               # Source code
+│   ├── main.ts       # Main process code
+│   └── index.html    # Renderer process entry
+├── dist/             # Build output
+├── .env.example      # Environment variables example
+└── package.json      # Project configuration
+```
+
+## Environment Variables
+
+- `RIJKSMUSEUM_API_KEY`: Your Rijksmuseum API key
+- `MCP_SERVER_PATH`: Path to the MCP server executable
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-ISC 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [Rijksmuseum API](https://data.rijksmuseum.nl/object-metadata/api/)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [Electron](https://www.electronjs.org/) 
